@@ -56,7 +56,7 @@ spl_autoload_register(function ($class) {
     }
   }
 	
-	// Generalised function for jquery processing vars that are an imploded array 
+	// Generalised function for jquery processing general config vars that are an imploded array 
 	/* example use
 	function sew_cfg_ez_update_rules($values) {
 		$possibles = array (

@@ -22,7 +22,7 @@
   if (isset($_SERVER['HTTP_ORIGIN'])) {
 	if (strpos($address, $_SERVER['HTTP_ORIGIN']) !== 0) {
 		header('HTTP/1.0 403 Forbidden', true, 403);
-		header('Content-Type: application/json');
+		header('Content-Type: application/json; charset=utf-8');
 		exit(json_encode([
 			'error' => 'Invalid Origin header: ' . $_SERVER['HTTP_ORIGIN']
 		]));
@@ -30,14 +30,14 @@
   } elseif (isset($_SERVER['HTTP_REFERER'])) { // no origin so check the referrer
 	if (parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST) <> $_SERVER['SERVER_NAME']) { // slightly better than not bothering
 		header('HTTP/1.0 403 Forbidden', true, 403);
-		header('Content-Type: application/json');
+		header('Content-Type: application/json; charset=utf-8');
 		exit(json_encode([
 			'error' => 'Invalid Referer header: ' . $_SERVER['HTTP_REFERER']
 		]));
 	}
   } else { 
 	header('HTTP/1.0 403 Forbidden', true, 403);
-	header('Content-Type: application/json');
+	header('Content-Type: application/json; charset=utf-8');
 	exit(json_encode(['error' => 'No Origin/Referer headers']));
   }  
 
@@ -90,7 +90,7 @@
 		$result['log'] = $logging;
 	}
 
-	header('Content-Type: application/json');
+	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($result);
 
   require('includes/application_bottom.php');
