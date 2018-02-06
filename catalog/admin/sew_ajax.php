@@ -1,7 +1,7 @@
 <?php
-/*************************************************************************
-** YOU ARE STRONGLY RECOMMENDED TO PASSWORD PROTECT THE ADMIN DIRECTORY **
-**************************************************************************
+/************************************************************************************
+** YOU ARE STRONGLY RECOMMENDED TO RENAME AND PASSWORD PROTECT THE ADMIN DIRECTORY **
+*************************************************************************************
   sew_ajax
 	an ajax handler which pulls in scripts depending on action
   
