@@ -16,6 +16,7 @@ namespace SEWC;
 class addonConfig
 {
 	protected $GROUP_NAME; // pseudo-constant set in child declarations - it's the name of the configuration group for the addon
+	protected $GROUP_DESC; // ditto
 	protected $group_id;
 	protected $keys;
 
@@ -30,6 +31,7 @@ class addonConfig
 			$cfg_grp_query = tep_db_query('SELECT MAX(sort_order) AS last_sort FROM ' . TABLE_CONFIGURATION_GROUP);
 			$cfg_grp_row = tep_db_fetch_array($cfg_grp_query);
 			$sql_data_array = array('configuration_group_title' => tep_db_input($this->GROUP_NAME), 'sort_order' => $cfg_grp_row['last_sort'] + 1);
+			if ( tep_not_null(tep_db_input($this->GROUP_DESC)) ) $sql_data_array['configuration_group_description'] = tep_db_input($this->GROUP_DESC);
 			tep_db_perform(TABLE_CONFIGURATION_GROUP,$sql_data_array);
 			$cfg_grp_id = tep_db_insert_id();
 		}
@@ -92,19 +94,27 @@ class addonConfig
 		  }
 		}
 		foreach ($configs as $key => $data) {
-		  $sql_data_array = array('configuration_title' => $data['title'],
-								  'configuration_key' => $key,
+		  $sql_data_array = array('configuration_key' => $key,
 								  'configuration_value' => (isset($data['value']) ? $data['value'] : ''),
-								  'configuration_description' => $data['desc'],
-								  'configuration_group_id' => $this->config_group,
 								  'sort_order' => $sort,
 								  'date_added' => 'now()');
 	
+		  if (isset($data['hidden'] && $data['hidden'] === true)) {
+				$sql_data_array['configuration_group_id'] = 6;
+		  } else {
+				$sql_data_array['configuration_group_id'] = $this->config_group;
+			}
+		  if (isset($data['title'])) {
+				$sql_data_array['configuration_title'] = $data['title'];
+		  }
+		  if (isset($data['desc'])) {
+				$sql_data_array['configuration_description'] = $data['desc'];
+		  }
 		  if (isset($data['set_func'])) {
-			$sql_data_array['set_function'] = $data['set_func'];
+				$sql_data_array['set_function'] = $data['set_func'];
 		  }
 		  if (isset($data['use_func'])) {
-			$sql_data_array['use_function'] = $data['use_func'];
+				$sql_data_array['use_function'] = $data['use_func'];
 		  }
 		  tep_db_perform(TABLE_CONFIGURATION, $sql_data_array);
 				$sort++;
@@ -120,6 +130,7 @@ class addonConfig
 						 'value' => 'True',
 						 'use_func' => 'sew_use_me',
 						 'set_func' => 'tep_cfg_select_option(array(\'true\', \'false\'), '),
+						 'hidden' => false,
 		);
 	
 	} */

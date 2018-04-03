@@ -56,6 +56,33 @@ spl_autoload_register(function ($class) {
     }
   }
 	
+	// Function used within addons to set a config var to the passed value
+	function sew_set_config_var($key, $value) {
+		if (tep_not_null($key)) {
+			$sql_data_array = array('configuration_value' => tep_db_input($value));
+			$check_query = tep_db_query('select configuration_key from ' . TABLE_CONFIGURATION . ' where configuration_key = "' . tep_db_input($key) . '"');
+			if (tep_db_num_rows($check_query)) {
+				tep_db_perform(TABLE_CONFIGURATION,$sql_data_array,'update','configuration_key="' . tep_db_input($key) . '"');
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+	
+	// Function used to unpack a var containing nested keyed arrays with three separators eg. type1;0,1,2|type2;3,4,5,6|type3;7,8,9
+	function sew_unpack_nested_config_var($var,$sep1 = '|',$sep2 = ';',$sep3 = ',') {
+		$return = array();
+		if (defined($var)) {
+			$unpack_set = explode($sep1,constant($var));
+			for ($i = 0; $i < $n = count($unpack_set); $i++) {
+				$unpack_type = explode($sep2,$unpack_set);
+				$return[$unpack_type[0]] = explode($sep3,$unpack_type[1]);
+			}
+		}
+		return $return;
+	}
+	
 	// Generalised function for jquery processing general config vars that are an imploded array 
 	/* example use
 	function sew_cfg_ez_update_rules($values) {
@@ -131,14 +158,25 @@ spl_autoload_register(function ($class) {
     return tep_draw_pull_down_menu($name, $list_array, $id);
 	}
 
+  // Function returns an array of details on installed shipping methods
+	// works in admin language
+	function sew_cfg_get_installed_shipping_methods($language = null) {
+		return sew_cfg_get_installed_modules('shipping',$language);
+	}
+	
   // Function returns an array of details on installed payment methods
 	// works in admin language
-	function sew_cfg_get_installed_payment_methods($payment_language = null) {
+	function sew_cfg_get_installed_payment_methods($language = null) {
+		return sew_cfg_get_installed_modules('payment',$language);
+	}
+
+  // Function returns an array of details on installed modules of type
+	// works in admin language
+	function sew_cfg_get_installed_modules($set, $module_language = null) {
 	  global $language, $cfgModules;
-		$payments = array();
+		$return = array();
 		if (is_null($payment_language)) $payment_language = $language;
     $modules = $cfgModules->getAll();
-		$set = 'payment';
 		$module_type = $cfgModules->get($set, 'code');
 		$module_directory = $cfgModules->get($set, 'directory');
 		$module_language_directory = $cfgModules->get($set, 'language_directory');
@@ -164,7 +202,7 @@ spl_autoload_register(function ($class) {
 		for ($i=0, $n=sizeof($directory_array); $i<$n; $i++) {
 			$file = $directory_array[$i];
 	
-			include_once($module_language_directory . $payment_language . '/modules/' . $module_type . '/' . $file);
+			include_once($module_language_directory . $module_language . '/modules/' . $module_type . '/' . $file);
 			include_once($module_directory . $file);
 	
 			$class = substr($file, 0, strrpos($file, '.'));
@@ -178,11 +216,11 @@ spl_autoload_register(function ($class) {
 															 'public' => (isset($module->public_title) ? $module->public_title : $module->title)
 												);
 
-          $payments[] = $module_info;
+          $return[] = $module_info;
 				}
 			}
 		}
-		return $payments;
+		return $return;
 	}
 	
 	function sew_ajax_styles() 
