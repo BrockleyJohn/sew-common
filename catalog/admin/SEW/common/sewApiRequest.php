@@ -50,7 +50,7 @@ class sewApiRequest
 	
 	public function getProFileName($app_code,$version_name,$user_key,$app_key) {
 	
-		$this->params = array('action' => , 'version' => , 'user_key' => , 'app_key' => );
+		$this->params = array('action' => $app_code, 'version' => $version_name, 'user_key' => $user_key, 'app_key' => $app_key);
 	}
 	
 	private function doRequest() {
