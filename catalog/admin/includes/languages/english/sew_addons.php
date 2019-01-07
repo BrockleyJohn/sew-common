@@ -7,6 +7,9 @@
 define('SEW_GO_PRO','Pro Upgrade');
 define('SEW_BUY_PRO','Buy Pro');
 define('SEW_PRO_KEY','Load Pro');
+define('SEW_PRO_VERSION','Pro Version');
+define('SEW_PROBUILD_CLICK','Click to rebuild');
+define('SEW_PROBUILD_NEEDED','REBUILD NEEDED (Click!)');
 
 define('SEW_CLICK_TO_INSTALL','Click to install');
 define('SEW_UPDATE_AVAILABLE','Update available');

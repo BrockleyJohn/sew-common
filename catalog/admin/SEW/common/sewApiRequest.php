@@ -48,9 +48,17 @@ class sewApiRequest
 		return $this->doRequest();
 	}
 	
-	public function getProFileName($app_code,$version_name,$user_key,$app_key) {
+	public function getIp() {
+		$this->url = 'ip/';
+		return $this->doRequest();
+	}
 	
-		$this->params = array('action' => $app_code, 'version' => $version_name, 'user_key' => $user_key, 'app_key' => $app_key);
+	public function getProFileName($app_code,$version_name,$user_key,$app_key) {
+		$this->url = 'apps/' . $app_code;
+		$this->method = 'POST';
+		$this->bodyType = 'form';
+		$this->params = array('action' => 'getpro', 'version' => $version_name, 'user_key' => $user_key, 'app_key' => $app_key);
+		return $this->doRequest();
 	}
 	
 	private function doRequest() {

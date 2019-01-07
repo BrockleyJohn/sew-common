@@ -3,11 +3,15 @@
 -
 	functions for configuration settings used across multiple addons
 	(instead of updating functions/general.php)
-  namespace autoloader
+	a couple of other useful functions (more html_output than general)
+  
+  namespace autoloader for SEwebsites common classes SEWC
 
+  v2.0 29/5/18 updated for EZV4 and featured specials
+  
   Author John Ferguson (@BrockleyJohn) john@sewebsites.net
   
-	copyright  (c) 2017 SEwebsites
+	copyright  (c) 2018 SEwebsites
 
  *
  */
@@ -175,7 +179,7 @@ spl_autoload_register(function ($class) {
 	function sew_cfg_get_installed_modules($set, $module_language = null) {
 	  global $language, $cfgModules;
 		$return = array();
-		if (is_null($payment_language)) $payment_language = $language;
+		if (is_null($module_language)) $module_language = $language;
     $modules = $cfgModules->getAll();
 		$module_type = $cfgModules->get($set, 'code');
 		$module_directory = $cfgModules->get($set, 'directory');
@@ -223,6 +227,76 @@ spl_autoload_register(function ($class) {
 		return $return;
 	}
 	
+	function sew_load_content_module($name, $group, $module_language = null) {
+	  global $language;
+	  
+	  if (tep_class_exists($name)) return new $name();
+	  if (is_null($module_language)) $module_language = $language;
+	  $file = $name.'.php';
+
+	  if (file_exists(DIR_FS_CATALOG_MODULES . 'content/' . $group . '/' . $file)) {
+        if ( file_exists(DIR_FS_CATALOG_LANGUAGES . $module_language . '/modules/content/' . $group . '/' . $file) ) {
+          include(DIR_FS_CATALOG_LANGUAGES . $module_language . '/modules/content/' . $group . '/' . $file);
+        }
+
+        include(DIR_FS_CATALOG_MODULES . 'content/' . $group . '/' . $file);
+	    if (tep_class_exists($name)) return new $name();
+	  }
+	}
+	
+	function sew_get_product_images($id) {
+		$files = [];
+		if ((int)$id > 0) {
+			$query = tep_db_query('select p.products_image, pi.image from products p left join products_images pi on pi.products_id = p.products_id where p.products_id = "' . (int)$id . '"');
+			while ($row = tep_db_fetch_array($query)) {
+			  if (count($files) == 0) {
+			    $files[] = $row['products_image'];
+			  }
+			  $files[] = $row['image'];
+			}
+		}
+		return $files;
+	}
+	
+		if ($dir = @dir($module_directory)) {
+			while ($file = $dir->read()) {
+				if (!is_dir($module_directory . $file)) {
+					if (substr($file, strrpos($file, '.')) == $file_extension) {
+            if (in_array($file, $modules_installed)) {
+              $directory_array[] = $file;
+						}
+					}
+				}
+			}
+			sort($directory_array);
+			$dir->close();
+		}
+
+	function sew_files_in_image_dir($path, $add_dir = false) {
+		$files = [];
+		if ($dir = @dir(DIR_FS_CATALOG . DIR_WS_CATALOG_IMAGES . $path)) {
+			while ($file = $dir->read()) {
+				if (!is_dir(DIR_FS_CATALOG . DIR_WS_CATALOG_IMAGES . $path . '/' . $file)) {
+					if ($image = getimagesize(DIR_FS_CATALOG . DIR_WS_CATALOG_IMAGES . $path . '/' . $file)) {
+						$files[] = ($add_dir ? $path . '/' : '') . $file;
+					}
+				}
+			}
+		}
+		return $files;
+	}
+	
+	function sew_draw_checkbox_field($name, $value = '', $checked = false, $compare = '', $params = null)
+	{
+		$select = tep_draw_selection_field($name, 'checkbox', $value, $checked, $compare);
+		return substr($select,0,-2) . $params . ' />';
+	}
+	
+  function sew_draw_radio_field($name, $value = '', $checked = false, $compare = '', $params = null) {
+    $select =  tep_draw_selection_field($name, 'radio', $value, $checked, $compare);
+	return substr($select,0,-2) . $params . ' />';
+  }
+
 	function sew_ajax_styles() 
 	{
 	  return '#progress, #result {padding: 8px 10px 10px 40px;} .working {background: url("https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/1.3.3/AjaxLoader.gif") no-repeat left top;} .success {background: url(images/ms_success.png) no-repeat left top;} .failed {background: url(images/ms_error.png) no-repeat left top;} ';
