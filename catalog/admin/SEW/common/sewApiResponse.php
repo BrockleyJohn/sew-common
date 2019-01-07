@@ -25,6 +25,7 @@ class sewApiResponse
 		$error = json_last_error();
 		if (! $this->OK = ($error == JSON_ERROR_NONE)) {
 			$this->setJsonError($error);
+			$this->raw = $result;
 		}
 		return $this->OK;
 	}
@@ -48,5 +49,6 @@ class sewApiResponse
 				return;
 			}
 		}
+		$this->error = 'unmapped error ' . $error;
 	}
 }

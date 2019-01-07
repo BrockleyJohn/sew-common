@@ -45,10 +45,10 @@ class addonVersion
 	
 	public function includes($seq) {
 		$return = array();
-		if ((!isset($this->app_key)) || (!tep_not_null($this->app_key))) {
+//		if ((!isset($this->app_key)) || (!tep_not_null($this->app_key))) {
+		if ( (!$this->pro_installed) || $this->rebuild_pro ) {
 			$return[] = self::ADDON_DIR . $this->app_code . '-' . $seq . '.php';
 		} else {
-			echo 'app key "' . $this->app_key . '"';
 			$return = $this->proincludes($seq);
 		}
 		return $return;
@@ -81,10 +81,11 @@ class addonVersion
   }
 	
 	public function badge() {
-		$output = '<div><style scoped>#vbutton, #vfresh, #vupdate, #buypro, #prokey {background: #225522; color: #ffffff; font-weight: bold; display: inline-block; padding: 10px; border-radius: 5px; margin:5px; cursor:pointer;} #vfresh, #vupdate {background: #99ff99; color: #222222; border:1px solid;} #vbadge {font-weight: bold; display: inline-block; padding: 10px; border-radius: 5px; margin:5px; border:1px solid;} .loadingActive, .failed, .succeeded { background-image: url(images/loading.gif) !important; background-repeat: no-repeat !important; background-position: left center !important; padding-left:40px !important; } .failed {background-image: url(images/ms_error.png) !important; } .succeeded {background-image: url(images/ms_success.png) !important; } #vbutton { float:right; } #vinfo, #pinfo {width: 45px; height: 45px; cursor:pointer;} #pinfo { float:right; background-image: url(images/ms_info.png); background-repeat: no-repeat; background-position: center center; } #loading {width: 45px; height: 45px;} </style>';
+		$output = '<div><style scoped>#vbutton, #vfresh, #vupdate, #buypro, #prokey {background: #225522; color: #ffffff; font-weight: bold; display: inline-block; padding: 10px; border-radius: 5px; margin:5px; cursor:pointer;} #vfresh, #vupdate {background: #99ff99; color: #222222; border:1px solid;} #vfresh.rebuild {background: #ff9999;} #vbadge {font-weight: bold; display: inline-block; padding: 10px; border-radius: 5px; margin:5px; border:1px solid;} .loadingActive, .failed, .succeeded { background-image: url(images/loading.gif) !important; background-repeat: no-repeat !important; background-position: left center !important; padding-left:40px !important; } .failed {background-image: url(images/ms_error.png) !important; } .succeeded {background-image: url(images/ms_success.png) !important; } #vbutton, #vfresh { float:right; } #vinfo, #pinfo {width: 45px; height: 45px; cursor:pointer;} #pinfo { float:right; background-image: url(images/ms_info.png); background-repeat: no-repeat; background-position: center center; } #loading {width: 45px; height: 45px;} </style>';
 		$output .= '<div id="vbadge">' . $this->version_title . '<br />Version: ' . $this->version_name . '<br />Author: ' . $this->version_author . '</div><br />';
 		if ($this->update_available) $output .= '<div id="vupdate">' . SEW_UPDATE_AVAILABLE . ' - Version: ' . $this->version_available . ' - ' .SEW_CLICK_TO_INSTALL . '</div><br />';
-		if ((!isset($this->app_key)) || (!tep_not_null($this->app_key))) {
+//		if ((!isset($this->app_key)) || (!tep_not_null($this->app_key))) {
+		if ( !$this->pro_installed ) {
 			$output .= '<div id="vbutton">Go Pro ';
 			if (isset($this->pro_cost)) { $output .= ' - Only &pound;' . $this->pro_cost; }
 			$output .= '</div><div id="pinfo"></div>';
@@ -99,13 +100,21 @@ class addonVersion
 </div>
 EOT;
 		} else {
-			$output .= '<div id="vfresh">Pro Version - rebuild</div>';
+			if ($this->rebuild_pro) { 
+				$text = SEW_PROBUILD_NEEDED;
+				$class = ' class="rebuild"';
+			} else {
+				$text = SEW_PROBUILD_CLICK;
+				$class = '';
+			}
+			$output .= '<div id="vfresh"' . $class . '>' . SEW_PRO_VERSION . '<br/>' . $text . '</div>';
+			$output .= '<div id="loading" style="float:right;"></div>';
 		}
 		$output .= '</div>'; 
 		return $output;
 	}
 	
-	public function install($filename) {
+	public function install($filename, $pro = false) {
 		$work_dir = DIR_FS_ADMIN . self::WORK_DIR . '/';
 		if (!file_exists($work_dir . $filename)) {
 			echo sprintf(SEW_FILE_NOT_FOUND,$filename);
@@ -128,40 +137,49 @@ EOT;
 		}
 		unset($zip);
 
-		if ((!file_exists($unzip_dir . 'update.zip')) || (!file_exists($unzip_dir . 'update.sig'))) {
-			echo SEW_UNPACK_FAILED;
-			return false;
+		if (! $pro) { // extra security on normal updates - contains a further zip and signature (pro includes are a special case)
+			if ((!file_exists($unzip_dir . 'update.zip')) || (!file_exists($unzip_dir . 'update.sig'))) {
+				echo SEW_UNPACK_FAILED;
+				return false;
+			}
+			
+			if (! $publicKeyId = openssl_get_publickey(file_get_contents(DIR_FS_ADMIN . 'SEW/sew.pem'))) {
+				echo SEW_CERT_FAILED;
+				return false;
+			}
+			$verify = openssl_verify(file_get_contents($unzip_dir . 'update.zip'), file_get_contents($unzip_dir . 'update.sig'), file_get_contents(DIR_FS_ADMIN . 'SEW/sew.pem'), OPENSSL_ALGO_SHA256);
+			switch ($verify) {
+				case 0 :
+					echo SEW_CHECK_FAILED;
+					return false;
+				case -1 :
+					echo SEW_CHECK_ERROR;
+					return false;
+			}
+			
+			mkdir($unzip_dir . 'unzip');
+			$zip = new \ZipArchive();
+			if ($zip->open($unzip_dir . 'update.zip') === true) {
+				$zip->extractTo($unzip_dir . 'unzip');
+				$zip->close();
+			}
+			unset($zip);
+			
+			$pathroot = $unzip_dir . 'unzip/';
+	
+		} else { // it's a pro install, whack 'em straight in from unzip
+		
+			$pathroot = $unzip_dir;
+		
 		}
 		
-		if (! $publicKeyId = openssl_get_publickey(file_get_contents(DIR_FS_ADMIN . 'SEW/sew.pem'))) {
-			echo SEW_CERT_FAILED;
-			return false;
-		}
-		$verify = openssl_verify(file_get_contents($unzip_dir . 'update.zip'), file_get_contents($unzip_dir . 'update.sig'), file_get_contents(DIR_FS_ADMIN . 'SEW/sew.pem'), OPENSSL_ALGO_SHA256);
-		switch ($verify) {
-			case 0 :
-				echo SEW_CHECK_FAILED;
-				return false;
-			case -1 :
-				echo SEW_CHECK_ERROR;
-				return false;
-		}
+		$update_files = $this->getDirectoryContents($pathroot);
 		
-		mkdir($unzip_dir . 'unzip');
-		$zip = new \ZipArchive();
-		if ($zip->open($unzip_dir . 'update.zip') === true) {
-			$zip->extractTo($unzip_dir . 'unzip');
-			$zip->close();
-		}
-		unset($zip);
-
         // check that everything necessary can be overwritten
 		$errors = array();
 
-		$update_files = $this->getDirectoryContents($unzip_dir . 'unzip');
-		
 		foreach ($update_files as $file) {
-        	$pathname = substr($file, strlen($unzip_dir . 'unzip/'));
+        	$pathname = substr($file, strlen($pathroot));
 			
 			if (substr($pathname, 0, 8) == 'catalog/') {
 				if (!$this->isWritable(DIR_FS_CATALOG . substr($pathname, 8)) || !$this->isWritable(DIR_FS_CATALOG . dirname(substr($pathname, 8)))) {
@@ -171,12 +189,16 @@ EOT;
 				if (!$this->isWritable(DIR_FS_ADMIN . substr($pathname, 8)) || !$this->isWritable(DIR_FS_ADMIN . dirname(substr($pathname, 8)))) {
                 	$errors[] = $this->displayPath(DIR_FS_ADMIN . substr($pathname, 8));
                 }
+			} else { // it's a pro include
+				if (!$this->isWritable(DIR_FS_ADMIN . self::ADDON_DIR . $pathname) || !$this->isWritable(DIR_FS_ADMIN . dirname(self::ADDON_DIR . $pathname))) {
+                	$errors[] = $this->displayPath(DIR_FS_ADMIN . self::ADDON_DIR . $pathname);
+                }
 			}
 		}
 		
 		if (empty($errors)) {
 			foreach ($update_files as $file) {
-	        	$pathname = substr($file, strlen($unzip_dir . 'unzip/'));
+	        	$pathname = substr($file, strlen($pathroot));
 
                 if (substr($pathname, 0, 8) == 'catalog/') {
 					$target = dirname(substr($pathname, 8));
@@ -216,6 +238,25 @@ EOT;
 						$errors[] = DIR_FS_ADMIN . $target . basename($pathname);
 						break;
 					}
+				} else {
+					$target = dirname(self::ADDON_DIR . $pathname);
+					
+					if ($target == '.') {
+						$target = '';
+					}
+					
+					if (!file_exists(DIR_FS_ADMIN . $target)) {
+						mkdir(DIR_FS_ADMIN . $target, 0777, true);
+					}
+					
+					if (!empty($target) && (substr($target, -1) != DIRECTORY_SEPARATOR)) {
+						$target .= DIRECTORY_SEPARATOR;
+					}
+					
+					if (!copy($file, DIR_FS_ADMIN . $target . basename($pathname))) {
+						$errors[] = DIR_FS_ADMIN . $target . basename($pathname);
+						break;
+					}
 				}
 			}
 		}
@@ -226,11 +267,17 @@ EOT;
 			}
 			return false;
 		} else {
-			$this->deldir($unzip_dir . 'unzip');
+			$this->deldir($pathroot);
 			$sql_data_array = array();
-			$sql_data_array['version_name'] = $this->version_available;
-			$sql_data_array['update_available'] = false;
-			$sql_data_array['version_available'] = 'null';
+			if (! $pro) {
+				$sql_data_array['version_name'] = $this->version_available;
+				$sql_data_array['update_available'] = false;
+				$sql_data_array['version_available'] = 'null';
+				$sql_data_array['pro_installed'] = false;
+			} else {
+				$sql_data_array['pro_installed'] = true;
+				$sql_data_array['pro_build_ip'] = $this->ip;
+			}
 			tep_db_perform('sew_addons', $sql_data_array, 'update', 'version_id = ' . (int)$this->version_id);
 			return true;
 		}
@@ -264,11 +311,11 @@ EOT;
 				}
 				return $filename;
 			} else {
-				echo SEW_SERVER_NOT_CONTACTED;
+				echo SEW_SERVER_NOT_CONTACTED . ' ' . $response->error . ' ' . $response->raw;
 				return false;
 			}
 		} else {
-			echo ERROR_INCONSISTENT_DATA;
+			echo sprintf(ERROR_INCONSISTENT_DATA, '"' . $addon_version . '" "' . $this->version_available . '"');
 			return false;
 		}
 	}
@@ -300,22 +347,25 @@ EOT;
 				$source = $response->data->filename;
 				$filename = basename($source);
 				$local = $work_dir . '/' . $filename;
-				if (! file_exists($local)) {
-					$ch = curl_init($request->urlroot . $source);
-					$fp = fopen($local, 'wb');
-					curl_setopt($ch, CURLOPT_FILE, $fp);
-					curl_setopt($ch, CURLOPT_HEADER, 0);
-					curl_exec($ch);
-					curl_close($ch);
-					fclose($fp);
+				if (file_exists($local)) {
+					unlink($local);
 				}
+
+				$ch = curl_init($request->urlroot . $source);
+				$fp = fopen($local, 'wb');
+				curl_setopt($ch, CURLOPT_FILE, $fp);
+				curl_setopt($ch, CURLOPT_HEADER, 0);
+				curl_exec($ch);
+				curl_close($ch);
+				fclose($fp);
+
 				return $filename;
 			} else {
-				echo SEW_SERVER_NOT_CONTACTED;
+				echo SEW_SERVER_NOT_CONTACTED . ' ' . $response->error;
 				return false;
 			}
 		} else {
-			echo ERROR_INCONSISTENT_DATA;
+			echo sprintf(ERROR_INCONSISTENT_DATA, '"' . $addon_version . '" "' . $this->version_name . '"');
 			return false;
 		}
 	}
@@ -332,10 +382,12 @@ EOT;
 	public function scripts() {
 		$code = $this->app_code;
 		$version = $this->version_available;
+		$proversion = $this->version_name;
 		$fetching = SEW_UPDATE_FETCHING;
 		$keyfetching = SEW_APP_KEY_FETCHING;
 		$profetching = SEW_PRO_FETCHING;
 		$installing = SEW_UPDATE_INSTALLING;
+		$proinstalling = SEW_PRO_INSTALLING;
 		$success = SEW_UPDATE_SUCCEEDED;
 		$failed = SEW_REQUEST_FAILED;
 		$tokenpage = 'https://sewebsites.net/oscommerce/user_token.php?products_model=' . $this->app_code;
@@ -395,7 +447,7 @@ EOT;
 		$('#loading').text('$keyfetching');
 		var data = new FormData();
 		data.append('addon_code','$code');
-		data.append('version','$version');
+		data.append('version','$proversion');
 		data.append('token',token);
 		data.append('action','addon_fetch_token');
 
@@ -421,8 +473,32 @@ EOT;
 					var response = JSON.parse(xhr2.responseText);
 					$('#loading').removeClass();
 					if(xhr2.status === 200 && response.status == 'ok'){
-						$('#loading').addClass('succeeded');
-						window.location.reload(true);
+						$('#loading').addClass('loadingActive');
+						$('#loading').text('$proinstalling');
+						data.set('action','addon_install_pro');
+						data.append('filename',response.filename);
+
+						var xhr3 = new XMLHttpRequest();     
+						xhr3.open('POST', 'sew_ajax.php', true);  
+						xhr3.send(data);
+						xhr3.onload = function () {
+							//get response and show the status
+							var response = JSON.parse(xhr3.responseText);
+							$('#loading').removeClass();
+							if(xhr3.status === 200 && response.status == 'ok'){
+								$('#loading').addClass('succeeded');
+                				window.location.reload(true);
+		
+							}else{
+								$('#loading').addClass('failed');
+								// Handle errors here
+								console.log('ERRORS: ' + response.error);
+								console.log('LOG: ' + response.log);
+								console.log('POST: ' + response.post);
+								console.log('GET: ' + response.get);
+							}
+						};
+
 					}else{
 						$('#loading').addClass('failed');
 						// Handle errors here
@@ -450,9 +526,10 @@ EOT;
 		popDialog('pro');
 	  });
 EOS;
-	    if (defined('SEW_ADDONS_USER_TOKEN') && strlen(SEW_ADDONS_USER_TOKEN)) {
+//	    if (defined('SEW_ADDONS_USER_TOKEN') && strlen(SEW_ADDONS_USER_TOKEN)) {
+	    if (isset($this->app_key) && strlen($this->app_key)) {
 			$output .= <<<EOS
-	  $('#prokey').on('click',function(e) {
+	  $('#prokey, #vfresh').on('click',function(e) {
 		getAppKey('TOKEN_SET');
 	  });
 EOS;
@@ -574,6 +651,16 @@ EOS;
 		return $output;
 	}
     
+	private function proincludes($seq) {
+		$ret = [];
+		$pro = unserialize(file_get_contents(self::ADDON_DIR . $this->app_code . '-profiles.txt'));
+		$num = $pro['F-'.$seq];
+		for ($i = 1; $i < $num +1; $i++) {
+			$ret[] = self::ADDON_DIR . hash('sha256', ($this->app_code . $seq . '-' . sprintf("%03d", $i) . $this->app_key . $this->ip)) . '.php';
+		}
+		return $ret;
+	}
+	
     private function getKey() {
         if (! defined('SEW_ADDONS_USER_TOKEN')) {
         	define('SEW_ADDONS_USER_TOKEN','');
@@ -587,8 +674,15 @@ EOS;
             if (array_key_exists($this->app_code,$token_list)) {
             	$this->app_key = $token_list[$this->app_code];
             }
+            $this->ip = exec('curl http://ipecho.net/plain; echo');
+            $request = new \SEWC\sewApiRequest();
+            $response = $request->getIp();
+            if ($response->OK && isset($response->data->ip)) {
+                $this->ip = $response->data->ip;
+            }
+            $this->rebuild_pro = (isset($this->ip) && isset($this->pro_build_ip) && $this->ip == $this->pro_build_ip ? false : true);
         }
-    }
+   }
     
     private function storeKey($token) {
     	$this->app_key = $token;

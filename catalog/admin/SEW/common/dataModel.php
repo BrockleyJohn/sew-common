@@ -51,6 +51,7 @@ class dataModel
                                 'configuration_group_id' => '6',
                                 'date_added' => 'now()');
         tep_db_perform(TABLE_CONFIGURATION, $sql_data_array);
+		define($this->MODEL_VERSION_VAR,$this->MODEL_VERSION);
 		}
 	}
 	
