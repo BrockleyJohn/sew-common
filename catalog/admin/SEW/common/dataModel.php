@@ -2,10 +2,12 @@
 /**
 -
   wrapper for data model requirements for addons / upgrades
+  
+  v2.0 Jan 2019 - rework model structures to support datamanager better
 
   Author John Ferguson (@BrockleyJohn) john@sewebsites.net
   
-	copyright  (c) 2017 SEwebsites
+	copyright  (c) 2019 SEwebsites
 
  * specialisations carry the actual model extensions and version vars
  * installs the required model extensions into the osc database
@@ -22,6 +24,10 @@ class dataModel
 
 	public function __construct()
 	{
+	  $check = '2.00';
+	  if (! (isset($this->COMPATIBILITY) && $this->COMPATIBILITY == $check) ) {
+	    throw new \Exception("Addon compatibility problem. dataModel '$check' - extension '" . (isset($this->COMPATIBILITY) ? $this->COMPATIBILITY : '') . "'");
+	  }
 	  if (! defined($this->MODEL_VERSION_VAR) || constant($this->MODEL_VERSION_VAR) <> $this->MODEL_VERSION ) {
 		  $this->check();
 		}
