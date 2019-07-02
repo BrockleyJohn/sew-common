@@ -3,13 +3,13 @@
 -
 	functions for configuration settings used across multiple addons
 	(instead of updating functions/general.php)
-	a couple of other useful functions (more html_output than general)
+	formatting functions required across admin
   
   namespace autoloader for SEwebsites common classes SEWC
 
   v2.0 29/5/18 updated for EZV4 and featured specials
   
-  Author John Ferguson (@BrockleyJohn) john@sewebsites.net
+  Author John Ferguson (@BrockleyJohn) oscommerce@sewebsites.net
   
 	copyright  (c) 2018 SEwebsites
 
@@ -78,10 +78,23 @@ spl_autoload_register(function ($class) {
 	function sew_unpack_nested_config_var($var,$sep1 = '|',$sep2 = ';',$sep3 = ',') {
 		$return = array();
 		if (defined($var)) {
-			$unpack_set = explode($sep1,constant($var));
+			$retun = sew_unpack_nested_value(constant($var),$sep1,$sep2,$sep3);
+		}
+		return $return;
+	}
+	
+	// Function used to unpack a value containing nested keyed arrays with up to three separators eg. type1;0,1,2|type2;3,4,5,6|type3;7,8,9
+	function sew_unpack_nested_value($val,$sep1 = '|',$sep2 = ';',$sep3 = ',') {
+		$return = array();
+		if (tep_not_null($val)) {
+			$unpack_set = explode($sep1,$val);
 			for ($i = 0; $i < $n = count($unpack_set); $i++) {
-				$unpack_type = explode($sep2,$unpack_set);
-				$return[$unpack_type[0]] = explode($sep3,$unpack_type[1]);
+				$unpack_type = explode($sep2,$unpack_set[$i]);
+				if (strpos($val,$sep3)) {
+					$return[$unpack_type[0]] = explode($sep3,$unpack_type[1]);
+				} else {
+					$return[$unpack_type[0]] = $unpack_type[1];
+				}
 			}
 		}
 		return $return;
@@ -149,6 +162,39 @@ spl_autoload_register(function ($class) {
 
 	}
 
+	// Function to flip a 2d array
+	function sew_2d_flip($in) {
+		if (is_array($in) && count($in)) {
+			$out = array();
+			foreach ($in as $key => $values) {
+				if (is_array($values)) {
+					for ($i = 0; $i < $n = count($values); $i++) {
+						$out[(string)$values[$i]] = $key;
+					}
+				} else {
+					$out[(string)$values] = $key;
+				}
+			}
+			return $out;
+		} else {
+			return $in;
+		}
+	}
+	
+
+	// return all possible orders_status
+	function sew_get_orders_statuses() {
+	  global $languages_id;
+
+    $statuses_array = array();
+    $statuses_query = tep_db_query("select orders_status_id, orders_status_name from " . TABLE_ORDERS_STATUS . " where language_id = '" . (int)$languages_id . "' order by orders_status_name");
+    while ($statuses = tep_db_fetch_array($statuses_query)) {
+      $statuses_array[] = array('id' => $statuses['orders_status_id'],
+                                'text' => $statuses['orders_status_name']);
+    }
+		return $statuses_array;
+	}
+	
   // Function returns list of top level osc categories
   function sew_cfg_pull_down_top_categories($id, $key = '') {
     global $languages_id;
@@ -161,6 +207,18 @@ spl_autoload_register(function ($class) {
     }
     return tep_draw_pull_down_menu($name, $list_array, $id);
 	}
+	
+  // Function returns a list of installed payment methods for drop-down
+	// works in admin language
+	function sew_payment_module_drop_down() {
+		$modules = sew_cfg_get_installed_payment_methods();
+		$list_array = array();
+		for ($i = 0; $i < $n = count($modules); $i++) {
+			$list_array[] = array('id' => $modules[$i]['code'],
+								'text' => $modules[$i]['title']);
+		}
+		return $list_array;
+	}  
 
   // Function returns an array of details on installed shipping methods
 	// works in admin language

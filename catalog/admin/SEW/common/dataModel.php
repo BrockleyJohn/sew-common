@@ -15,6 +15,7 @@ namespace SEWC;
 
 class dataModel
 {
+  const DEBUG = false;
   protected $MODEL_VERSION; // pseudo-constant set in child declarations
   protected $MODEL_VERSION_VAR; // ditto
   protected $MODEL_VERSION_VAR_TITLE; // and again
@@ -22,14 +23,16 @@ class dataModel
 
 	public function __construct()
 	{
-	  if (! defined($this->MODEL_VERSION_VAR) || constant($this->MODEL_VERSION_VAR) <> $this->MODEL_VERSION ) {
+		if ( (! defined($this->MODEL_VERSION_VAR)) || constant($this->MODEL_VERSION_VAR) <> $this->MODEL_VERSION ) {
 		  $this->check();
 		}
 	}
 	
 	protected function check()
 	{
+	  $this->dbg('checking');
 	  $this->tables = $this->defineTables();
+	  $this->dbg('<pre>'.print_r($this->tables).'</pre>');
 		if (count($this->tables)) {
 			foreach ($this->tables as $table => $def) {
 				$exists = tep_db_num_rows(tep_db_query('SHOW TABLES LIKE "' . $table . '"'));
@@ -127,6 +130,13 @@ class dataModel
 	protected function checkData()
 	{
 	  return;
+	}
+	
+	protected function dbg($txt)
+	{
+		exit('constant value "' . self::DEBUG . '"');
+		if (self::DEBUG === true)
+			echo "$txt<br>\n";
 	}
 	
 }
