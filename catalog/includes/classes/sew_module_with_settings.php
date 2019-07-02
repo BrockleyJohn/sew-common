@@ -6,7 +6,7 @@
   
   v1.0 1/10/18 initial version
   
-  Author John Ferguson (@BrockleyJohn) john@sewebsites.net
+  Author John Ferguson (@BrockleyJohn) oscommerce@sewebsites.net
   
 	copyright  (c) 2018 SEwebsites
 
