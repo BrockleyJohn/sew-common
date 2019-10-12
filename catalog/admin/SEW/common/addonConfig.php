@@ -79,19 +79,78 @@ class addonConfig
 		return $keys;
 	}
 	
+	protected function startConfigDialog($title,$button,$action)
+	{
+		$return .= '<script><!--
+	$(document).ready(function() {
+	
+		$( "#config_dbox" ).dialog({
+			autoOpen: false,
+			title: "'.$title.'",
+			width : "auto",
+			height : 350,
+			position : { my: "top", at: "top", of: "#contentText" }
+		});
+	
+		$(".config_settings").click(function() {
+			$("#config_dbox").dialog("open");
+		});
+	
+		$(".config_button").click(function() {
+			$("#config_dbox").dialog("close");
+		//	$("#config_form").submit();
+		});
+	
+	}); //end of document ready function
+	//--></script>
+	';
+		$return .= '</form><span class="config_settings">' . tep_draw_button($button, 'gear','','',array('type'=>'reset'))."</span>\n";
+		$return .= '<div id="config_dbox"><style type="text/css" scoped>.center {text-align: center;} '.sew_ajax_styles().'</style>'.tep_draw_form('config_form', 'sew_utils.php', '' , 'post', 'enctype="multipart/form-data" id="config_form"').tep_draw_hidden_field('action',$action).tep_draw_hidden_field('return','configuration.php').tep_draw_hidden_field('param_string','gID='.$this->group_id.(isset($_GET['cID']) ? '&cID='.$_GET['cID'] : ''));
+	  return $return;
+	}
+	
+	protected function endConfigDialog()
+	{
+		return '<span class="config_button">' . tep_draw_button(IMAGE_SAVE, 'disk').'</span><span id="result"></span><span id="progress"></span></div>';
+	}
+	
+	protected function unpackBangPipe($key)
+	{ // break into arrays format type1!0!1!2|type2!3!4!5!6|type3!7|type4
+	  $return = array();
+		if (defined($key)) {
+		  $rows = explode('|',constant($key));
+			if (count($rows)) {
+			  foreach ($rows as $row) {
+				  $map = explode('!',$row); // [0] type [1+] order statuses
+					$values = array();
+					for ($i = 1; $i < $n = count($map); $i++) {
+						$values[] = $map[$i];
+					}
+					$return[$map[0]] = $values;
+				}
+			}
+		}
+		return $return;
+	}
+	
+	protected function setVar($key,$value)
+	{
+	  return tep_db_query('UPDATE ' . TABLE_CONFIGURATION . ' SET configuration_value = "' . tep_db_input($value) . '" WHERE configuration_key = "' . tep_db_input($key) . '"');
+	}
+	
 	protected function install($config = null)
 	{ // install passed setting or all of them
 		$configs = $this->keys;
 		$sort = 1;
-			if (isset($config)) {
-			  $cfg_query = tep_db_query('SELECT MAX(sort_order) AS last_sort FROM ' . TABLE_CONFIGURATION . ' WHERE configuration_group_id = ' . $this->group_id);
-			  $cfg_row = tep_db_fetch_array($cfg_query);
-				$sort = $cfg_row['last_sort'] + 1;
-		  if (isset($configs[$config])) {
-			$configs = array($config => $configs[$config]);
-		  } else {
-			$configs = array();
-		  }
+		$cfg_query = tep_db_query('SELECT MAX(sort_order) AS last_sort FROM ' . TABLE_CONFIGURATION . ' WHERE configuration_group_id = ' . $this->group_id);
+		$cfg_row = tep_db_fetch_array($cfg_query);
+		$sort = $cfg_row['last_sort'] + 1;
+		if (isset($config)) {
+			if (isset($configs[$config])) {
+				$configs = array($config => $configs[$config]);
+			} else {
+				$configs = array();
+			}
 		}
 		foreach ($configs as $key => $data) {
 		  $sql_data_array = array('configuration_key' => $key,
@@ -99,10 +158,10 @@ class addonConfig
 								  'sort_order' => $sort,
 								  'date_added' => 'now()');
 	
-		  if (isset($data['hidden'] && $data['hidden'] === true)) {
+		  if (isset($data['hidden']) && $data['hidden'] === true) {
 				$sql_data_array['configuration_group_id'] = 6;
 		  } else {
-				$sql_data_array['configuration_group_id'] = $this->config_group;
+				$sql_data_array['configuration_group_id'] = $this->group_id;
 			}
 		  if (isset($data['title'])) {
 				$sql_data_array['configuration_title'] = $data['title'];
