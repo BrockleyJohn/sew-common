@@ -32,7 +32,7 @@ class dataModel
 	{
 	  $this->dbg('checking');
 	  $this->tables = $this->defineTables();
-	  $this->dbg('<pre>'.print_r($this->tables).'</pre>');
+	  $this->dbg('<pre>'.print_r($this->tables,true).'</pre>');
 		if (count($this->tables)) {
 			foreach ($this->tables as $table => $def) {
 				$exists = tep_db_num_rows(tep_db_query('SHOW TABLES LIKE "' . $table . '"'));
