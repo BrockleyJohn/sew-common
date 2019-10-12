@@ -103,7 +103,7 @@
 				  $setting_out .= tep_draw_textarea_field('configuration['.$key.']', null, 120, 20, $key_value['configuration_value'],'class="editor"');
 				  break;
 			    case 'image' :
-				  $file = $key_value['configuration_value'];
+				  $file = (strlen($key_value['configuration_value']) ? $key_value['configuration_value'] : 'no-image.jpg');
 				  $setting_out .= '<div style="float:left; text-align:center;"><img height="100" src="' . HTTPS_CATALOG_SERVER . DIR_WS_CATALOG_IMAGES . $file . '"/><br/>' . $file . "</div>\n";
 				  $setting_out .= '<div id="'.$key.'_Images" style="clear:left;">'.TEXT_CHOOSE_IMAGE."<br/>\n".'<div id="'.$key.'_imageList">';
 				  if ($setting['page_set_func'] && function_exists($setting['page_set_func'])) {
