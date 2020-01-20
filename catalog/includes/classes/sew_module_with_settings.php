@@ -75,6 +75,7 @@
 
     function settings_page() {
 	  $output = [];
+      $keys = $this->keys(); // install any settings not already there...
 	  $settings = $this->getParams();
 	  
       if ($this->check()) {
