@@ -23,16 +23,16 @@ class addonConfig
 	protected function getConfigGroup()
 	{
 		if (!strlen(tep_db_input($this->GROUP_NAME))) return false;
-		$cfg_grp_query = tep_db_query('SELECT * FROM ' . TABLE_CONFIGURATION_GROUP . ' WHERE configuration_group_title = "' . tep_db_input($this->GROUP_NAME) . '"');
+		$cfg_grp_query = tep_db_query('SELECT * FROM configuration_group WHERE configuration_group_title = "' . tep_db_input($this->GROUP_NAME) . '"');
 		if (tep_db_num_rows($cfg_grp_query)) {
 			$cfg_grp_row = tep_db_fetch_array($cfg_grp_query);
 			$cfg_grp_id = $cfg_grp_row['configuration_group_id'];
 		} else {
-			$cfg_grp_query = tep_db_query('SELECT MAX(sort_order) AS last_sort FROM ' . TABLE_CONFIGURATION_GROUP);
+			$cfg_grp_query = tep_db_query('SELECT MAX(sort_order) AS last_sort FROM configuration_group');
 			$cfg_grp_row = tep_db_fetch_array($cfg_grp_query);
 			$sql_data_array = array('configuration_group_title' => tep_db_input($this->GROUP_NAME), 'sort_order' => $cfg_grp_row['last_sort'] + 1);
 			if ( tep_not_null(tep_db_input($this->GROUP_DESC)) ) $sql_data_array['configuration_group_description'] = tep_db_input($this->GROUP_DESC);
-			tep_db_perform(TABLE_CONFIGURATION_GROUP,$sql_data_array);
+			tep_db_perform('configuration_group',$sql_data_array);
 			$cfg_grp_id = tep_db_insert_id();
 		}
 		return $cfg_grp_id;
@@ -135,14 +135,14 @@ class addonConfig
 	
 	protected function setVar($key,$value)
 	{
-	  return tep_db_query('UPDATE ' . TABLE_CONFIGURATION . ' SET configuration_value = "' . tep_db_input($value) . '" WHERE configuration_key = "' . tep_db_input($key) . '"');
+	  return tep_db_query('UPDATE configuration SET configuration_value = "' . tep_db_input($value) . '" WHERE configuration_key = "' . tep_db_input($key) . '"');
 	}
 	
 	protected function install($config = null)
 	{ // install passed setting or all of them
 		$configs = $this->keys;
 		$sort = 1;
-		$cfg_query = tep_db_query('SELECT MAX(sort_order) AS last_sort FROM ' . TABLE_CONFIGURATION . ' WHERE configuration_group_id = ' . $this->group_id);
+		$cfg_query = tep_db_query('SELECT MAX(sort_order) AS last_sort FROM configuration WHERE configuration_group_id = ' . $this->group_id);
 		$cfg_row = tep_db_fetch_array($cfg_query);
 		$sort = $cfg_row['last_sort'] + 1;
 		if (isset($config)) {

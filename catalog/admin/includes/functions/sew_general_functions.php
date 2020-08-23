@@ -306,6 +306,18 @@ spl_autoload_register(function ($class) {
 	    if (tep_class_exists($name)) return new $name();
 	  }
 	}
+
+    function sew_get_products_price_info($id) {
+ 
+      $price_q = tep_db_query('select products_price, products_tax_class_id from products where products_id = ' . (int)$id);
+  
+      if (! tep_db_num_rows($price_q)) {
+
+        return false;
+      }
+
+      return tep_db_fetch_array($price_q);
+    }
 	
 	function sew_get_product_images($id) {
 		$files = [];
