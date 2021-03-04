@@ -2,7 +2,7 @@
 /********************************************************
   common language defs for addon management
   
-  Author: John Ferguson @BrockleyJohn john@sewebsites.net
+  Author: John Ferguson @BrockleyJohn oscommerce@sewebsites.net
 *********************************************************/
 define('SEW_GO_PRO','Pro Upgrade');
 define('SEW_BUY_PRO','Buy Pro');
