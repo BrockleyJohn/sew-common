@@ -69,6 +69,24 @@ class addonConfig
     $cfg = new $class(); // instantiates which checks for updates
     return '<a title="coming soon">[ Remove settings ] [ Remove settings and database changes ]</a>';
   }
+
+	public static function varTitle($var)
+	// get the title in settings for a config var
+	// e.g. when for error messages when not set
+	{
+    $class = '\\' . get_called_class();
+    $cfg = new $class(); // instantiates which checks for updates
+    return $cfg->get_title($var);
+	}
+
+	public function get_title($var)
+	// should be protected but then it wouldn't work. Don't rely on this being unchanged
+	{
+		$vars = $this->getConfigs();
+		if (array_key_exists($var, $vars)) {
+			return $vars[$var]['title'];
+		}
+	}
   
   public function shout()
   // handy for testing!
