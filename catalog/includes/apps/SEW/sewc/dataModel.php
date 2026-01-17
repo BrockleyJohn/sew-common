@@ -1,6 +1,8 @@
 <?php
 /**
 -
+	v2.2 Jan 2026 reinstate tablecols static method
+	v2.1 introduce override of defaults for table type, charset and collation
   v2.0 finally revise for consts and static Dec 2020
   v1.1 remove table constants September 2020
   
@@ -23,6 +25,15 @@ class dataModel
   const MODEL_VERSION_VAR_TITLE...; // title for the config var 
 */
 	protected $tables;
+	const TABLE_TYPE = 'InnoDB'; // set if you want to override the default table type, i.e. 'InnoDB' or 'MyISAM'
+	const TABLE_CHARSET = 'utf8'; // set if you want to override the default column charset, e.g. 'utf8mb4' or 'utf8'
+	const TABLE_COLLATE = 'utf8_unicode_ci'; // set if you want to override the default column collation, e.g. 'utf8mb4_unicode_ci' or 'utf8_general_ci'
+
+	public static function tablecols($table)
+	{
+	  $model = new static();
+	  return array_keys($model->defineTables()[$table]['columns']);
+	}
 
 	public function __construct()
 	{
@@ -57,11 +68,26 @@ class dataModel
         tep_db_perform('configuration', $sql_data_array);
 		}
 	}
+
+	public function checkOneTable($table, $link = 'db_link')
+	{
+	  $this->tables = $this->defineTables();
+		if (isset($this->tables[$table])) {
+			$exists = tep_db_num_rows(tep_db_query('SHOW TABLES LIKE "' . $table . '"', $link));
+			if (! $exists) {
+				$this->installTable($table, $link);
+			} else {
+				$this->checkTable($table, $link);
+			}
+		} else {
+			error_log("key $table not set in " . print_r($this->tables, true));
+		}
+	}
 	
-	protected function checkTable($table)
+	protected function checkTable($table, $link = 'db_link')
 	{
 	  $sql = '';
-		$query = tep_db_query('DESCRIBE ' . $table);
+		$query = tep_db_query('DESCRIBE ' . $table, $link);
 		$cols = array();
 		while ($row = tep_db_fetch_array($query)) {
 		  $cols[] = $row['Field'];
@@ -74,13 +100,19 @@ class dataModel
 					$sql .= ',
 		ADD COLUMN `' . $col . '` ' . $def;
 				}
+				if (strlen(static::TABLE_CHARSET)) {
+					$sql .= ' CHARACTER SET ' . static::TABLE_CHARSET;
+				}
+				if (strlen(static::TABLE_COLLATE)) {
+					$sql .= ' COLLATE ' . static::TABLE_COLLATE;
+				}
 			}
 		}
-		if (strlen($sql)) tep_db_query($sql);
+		if (strlen($sql)) tep_db_query($sql, $link);
 		$sql = '';
-		$query = tep_db_query('SHOW INDEX FROM ' . $table);
+		$query = tep_db_query('SHOW INDEX FROM ' . $table, $link);
 		$keys = array();
-		while ($row = tep_db_fetch_array($query)) {
+		while ($row = tep_db_fetch_array($query, $link)) {
 			$keys[] = $row['Key_name'];
 		}
 		if ((!in_array('PRIMARY',$keys)) && array_key_exists('primary_key',$this->tables[$table])) {
@@ -97,10 +129,10 @@ class dataModel
 					}
 			}
 		}
-		if (strlen($sql)) tep_db_query($sql);
+		if (strlen($sql)) tep_db_query($sql, $link);
 	}
 	
-	protected function installTable($table)
+	protected function installTable($table, $link = 'db_link')
 	{
 	  $sql = 'CREATE TABLE `' . $table . '` (
 		';
@@ -116,10 +148,24 @@ class dataModel
 			}
 		}
 		$sql .= ')';
-		tep_db_query($sql);
-		if (array_key_exists('data',$this->tables[$table])) {
-		  tep_db_query($this->tables[$table]['data']);
+		if (strlen(static::TABLE_TYPE)) {
+		  $sql .= ' ENGINE=' . static::TABLE_TYPE;
 		}
+		if (strlen(static::TABLE_CHARSET)) {
+		  $sql .= ' CHARACTER SET ' . static::TABLE_CHARSET;
+		}
+		if (strlen(static::TABLE_COLLATE)) {
+		  $sql .= ' COLLATE ' . static::TABLE_COLLATE;
+		}
+		tep_db_query($sql, $link);
+		if (array_key_exists('data',$this->tables[$table])) {
+		  tep_db_query($this->tables[$table]['data'], $link);
+		}
+	}
+
+	public function read()
+	{
+		$this->defineTables();
 	}
 	
 	protected function defineTables()
